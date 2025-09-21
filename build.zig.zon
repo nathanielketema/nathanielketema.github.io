@@ -1,0 +1,8 @@
+.{
+    .name = .nathanielketema_github_io,
+    .version = "0.0.0",
+    .fingerprint = 0xa3c16b11e8404a4e,
+    .minimum_zig_version = "0.15.1",
+    .dependencies = .{},
+    .paths = .{"."},
+}
