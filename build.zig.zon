@@ -1,0 +1,19 @@
+.{
+    .name = .nathanielketema_github_io,
+    .version = "0.0.0",
+    .fingerprint = 0xa3c16b119c47dc22,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .pandoc_macos_arm64 = .{
+            .url = "https://github.com/jgm/pandoc/releases/download/3.10.1/pandoc-3.10.1-arm64-macOS.zip",
+            .hash = "N-V-__8AAOuLVAsm80UkRyVBeXXfP1WiCJVoqGEylvMqYZRj",
+            .lazy = true,
+        },
+        .pandoc_linux_arm64 = .{
+            .url = "https://github.com/jgm/pandoc/releases/download/3.10.1/pandoc-3.10.1-linux-arm64.tar.gz",
+            .hash = "N-V-__8AAJ9vcAopzh0TJx0y658rEiDfEC5vj377GITzVeNp",
+            .lazy = true,
+        },
+    },
+    .paths = .{"."},
+}
