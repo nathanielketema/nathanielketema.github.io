@@ -10,7 +10,7 @@ const Html = @import("Html.zig");
 
 const path_base = "content/";
 const path_posts = "posts/";
-const say_my_name = "Nathaniel Ketema";
+const say_my_name = "nathanielketema";
 
 pub const Website = struct {
     b: *Build,
