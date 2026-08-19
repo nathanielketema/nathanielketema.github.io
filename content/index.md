@@ -2,4 +2,4 @@
 
 It worked!
 
-[Posts](posts/2026-08-06-test-101.md)
+[Posts](posts/2026_08_06_test_101.md)
