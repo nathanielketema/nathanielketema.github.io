@@ -71,7 +71,7 @@ pub const Website = struct {
         const posts = website.collect_posts();
         for (posts) |post| {
             html_list.write(template_list, .{
-                .url = b.pathJoin(&.{ path_posts, post.url }),
+                .url = post.url,
                 .title = post.title,
             }) catch |err| fatal_template(err);
 
