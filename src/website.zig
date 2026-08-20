@@ -12,6 +12,9 @@ const path_base = "content/";
 const path_posts = "posts/";
 const say_my_name = "nathanielketema";
 
+const template_posts = @embedFile("html/posts.html");
+const template_list = @embedFile("html/li.html");
+
 pub const Website = struct {
     b: *Build,
     pandoc: Build.LazyPath,
@@ -64,8 +67,14 @@ pub const Website = struct {
         const b = website.b;
         const arena = b.allocator;
 
+        var html_list = Html.create(arena) catch oom();
         const posts = website.collect_posts();
         for (posts) |post| {
+            html_list.write(template_list, .{
+                .url = b.pathJoin(&.{ path_posts, post.url }),
+                .title = post.title,
+            }) catch |err| fatal_template(err);
+
             const page_post_out = website.write_page(.{
                 .page_title = post.title,
                 .page_url = b.pathJoin(&.{ path_posts, post.url }),
@@ -74,18 +83,13 @@ pub const Website = struct {
             _ = website.content.addCopyFile(page_post_out, post.path_out);
         }
 
-        var html = Html.create(arena) catch oom();
-        const content_posts = comptime
-            \\<ul>
-            \\  <li>test: post</li>
-            \\</ul>
-        ;
-        html.write(content_posts, .{}) catch |err| {
-            fatal("unable to write to html template: {t}\n", .{err});
-        };
+        var html_posts = Html.create(arena) catch oom();
+        html_posts.write(template_posts, .{
+            .list = html_list.string(),
+        }) catch |err| fatal_template(err);
 
         const file_posts_index = b.addWriteFiles();
-        const content_index = file_posts_index.add("posts_index.html", html.string());
+        const content_index = file_posts_index.add("posts_index.html", html_posts.string());
 
         const page_posts_index_out = website.write_page(.{
             .page_title = say_my_name,
@@ -240,6 +244,10 @@ fn fatal_dir(err: anyerror) noreturn {
 
 fn fatal_walk(err: anyerror) noreturn {
     fatal("unable to walk directory: {t}\n", .{err});
+}
+
+fn fatal_template(err: anyerror) noreturn {
+    fatal("unable to write to html template: {t}\n", .{err});
 }
 
 fn fatal(comptime fmt: []const u8, args: anytype) noreturn {
