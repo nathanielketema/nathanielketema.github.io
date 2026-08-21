@@ -14,6 +14,11 @@
             .hash = "N-V-__8AAJ9vcAopzh0TJx0y658rEiDfEC5vj377GITzVeNp",
             .lazy = true,
         },
+        .pandoc_windows_x86_64 = .{
+            .url = "https://github.com/jgm/pandoc/releases/download/3.10.1/pandoc-3.10.1-windows-x86_64.zip",
+            .hash = "N-V-__8AAJAp6g1TriXyH7itAXlsIgz6QqLaA1Rxkse_u-wn",
+            .lazy = true,
+        },
     },
     .paths = .{"."},
 }

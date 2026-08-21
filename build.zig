@@ -27,14 +27,13 @@ fn get_pandoc_bin(b: *std.Build) ?std.Build.LazyPath {
     const name = switch (host.os.tag) {
         .linux => switch (host.cpu.arch) {
             .aarch64 => "pandoc_linux_arm64",
-            .x86_64 => @panic("TODO: add x86_64 support for linux"),
             else => @panic("unsupported cpu arch"),
         },
         .macos => switch (host.cpu.arch) {
             .aarch64 => "pandoc_macos_arm64",
             else => @panic("unsupported cpu arch"),
         },
-        .windows => @panic("TODO: add windows support"),
+        .windows => "pandoc_windows_x86_64",
         else => @panic("unsuppored os"),
     };
 
