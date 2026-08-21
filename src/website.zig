@@ -107,54 +107,6 @@ pub const Website = struct {
         }));
     }
 
-    pub const Post = struct {
-        title: []const u8,
-        url: []const u8,
-        path_out: []const u8,
-        content: Build.LazyPath,
-
-        pub fn parse(website: Website, file_md: []const u8) Post {
-            const b = website.b;
-            const arena = b.allocator;
-
-            var it = mem.tokenizeScalar(u8, file_md, '_');
-            const year = it.next().?;
-            const month = it.next().?;
-            const day = it.next().?;
-            const title = "TODO: change me later";
-            const file_html = blk: {
-                const file_tmp = mem.replaceOwned(u8, arena, it.rest(), "_", "-") catch oom();
-                const stem = Io.Dir.path.stem(file_tmp);
-                break :blk mem.concat(arena, u8, &.{ stem, ".html" }) catch oom();
-            };
-
-            const path_out = mem.join(arena, "/", &.{
-                path_posts[0 .. path_posts.len - 1], // remove "/" from the end
-                year,
-                month,
-                day,
-                file_html,
-            }) catch oom();
-
-            const url = mem.join(arena, "/", &.{
-                year,
-                month,
-                day,
-                file_html,
-            }) catch oom();
-
-            const source = b.path(path_base).path(b, path_posts).path(b, file_md);
-            const content = website.run_pandoc(source);
-
-            return .{
-                .title = title,
-                .url = url,
-                .path_out = path_out,
-                .content = content,
-            };
-        }
-    };
-
     pub fn collect_posts(website: Website) []Post {
         const b = website.b;
         const io = b.graph.io;
@@ -177,10 +129,24 @@ pub const Website = struct {
                 if (mem.eql(u8, entry.basename, "index.md")) continue;
                 if (mem.eql(u8, entry.basename, "resume.md")) continue;
 
-                const post = Post.parse(website, entry.basename);
+                const post = Post.parse(
+                    website,
+                    entry.basename,
+                    b.pathJoin(&.{ path_base, entry.path }),
+                ) catch |err| {
+                    fatal("unable to parse post {s}: {t}\n", .{ entry.path, err });
+                };
                 posts.append(arena, post) catch oom();
             }
         }
+
+        mem.sort(Post, posts.items, {}, struct {
+            fn greater_than(_: void, lhs: Post, rhs: Post) bool {
+                if (lhs.date.year != rhs.date.year) return lhs.date.year > rhs.date.year;
+                if (lhs.date.month != rhs.date.month) return lhs.date.month > rhs.date.month;
+                return lhs.date.day > rhs.date.day;
+            }
+        }.greater_than);
 
         return posts.items;
     }
@@ -210,17 +176,22 @@ pub const Website = struct {
         }
     }
 
-    pub fn write_page(website: Website, options: struct {
-        page_title: []const u8,
-        page_url: []const u8,
-        page_content: Build.LazyPath,
-    }) Build.LazyPath {
+    pub fn write_page(
+        website: Website,
+        options: struct {
+            page_title: []const u8,
+            page_url: []const u8,
+            page_content: Build.LazyPath,
+            page_description: []const u8 = "Nathaniel Ketema's personal website",
+        },
+    ) Build.LazyPath {
         const b = website.page_writer_exe.step.owner;
 
         const page_writer_run = b.addRunArtifact(website.page_writer_exe);
         page_writer_run.addArgs(&.{
             options.page_title,
             options.page_url,
+            options.page_description,
         });
         page_writer_run.addFileArg(options.page_content);
         return page_writer_run.addOutputFileArg("page.html");
@@ -238,6 +209,151 @@ pub const Website = struct {
         return pandoc_step.captureStdOut(.{});
     }
 };
+
+pub const Date = struct {
+    year: u32,
+    month: u8,
+    day: u8,
+
+    comptime {
+        assert(@sizeOf(Date) == 8);
+    }
+
+    pub fn parse(year: []const u8, month: []const u8, day: []const u8) !Date {
+        return .{
+            .year = try std.fmt.parseInt(u32, year, 10),
+            .month = try std.fmt.parseInt(u8, month, 10),
+            .day = try std.fmt.parseInt(u8, day, 10),
+        };
+    }
+};
+
+pub const Post = struct {
+    title: []const u8,
+    description: []const u8,
+    url: []const u8,
+    path_out: []const u8,
+    content: Build.LazyPath,
+    date: Date,
+    time_machine: []const u8,
+    time_human: []const u8,
+
+    pub fn parse(website: Website, file_md: []const u8, path_page: []const u8) !Post {
+        const b = website.b;
+        const io = b.graph.io;
+        const arena = b.allocator;
+
+        const page = Page.parse(io, arena, path_page) catch |err| {
+            fatal("unable to parse page content of {s}: {t}\n", .{ path_page, err });
+        };
+
+        var it = mem.tokenizeScalar(u8, file_md, '_');
+        const year = it.next() orelse return error.InvalidFileName;
+        const month = it.next() orelse return error.InvalidFileName;
+        const day = it.next() orelse return error.InvalidFileName;
+        const title = page.title;
+        const description = page.description;
+        const file_html = blk: {
+            const file_tmp = try mem.replaceOwned(u8, arena, it.rest(), "_", "-");
+            const stem = Io.Dir.path.stem(file_tmp);
+            break :blk try mem.concat(arena, u8, &.{ stem, ".html" });
+        };
+
+        const path_out = try mem.join(arena, "/", &.{
+            path_posts[0 .. path_posts.len - 1], // remove "/" from the end
+            year,
+            month,
+            day,
+            file_html,
+        });
+
+        const url = try mem.join(arena, "/", &.{
+            year,
+            month,
+            day,
+            file_html,
+        });
+
+        const source = b.path(path_base).path(b, path_posts).path(b, file_md);
+        const content = website.run_pandoc(source);
+
+        const time_machine = try mem.join(arena, "-", &.{ year, month, day });
+        const time_human = parse_machine_time(arena, time_machine) catch |err| {
+            fatal("unable to parse time {s}: {t}\n", .{ time_machine, err });
+        };
+        const date = try Date.parse(year, month, day);
+
+        return .{
+            .title = title,
+            .description = description,
+            .url = url,
+            .path_out = path_out,
+            .content = content,
+            .date = date,
+            .time_machine = time_machine,
+            .time_human = time_human,
+        };
+    }
+
+    // YYYY-MM-DD
+    // 2020-07-06 -> Jun 06, 2020
+    fn parse_machine_time(arena: Allocator, time_machine: []const u8) ![]const u8 {
+        var it = mem.tokenizeScalar(u8, time_machine, '-');
+        const year = it.next().?;
+        const month_number = try std.fmt.parseInt(u8, it.next().?, 10);
+        const day = it.next().?;
+        assert(it.next() == null);
+
+        const months: []const []const u8 = &.{
+            "Jan", "Feb", "Mar", "Apr",
+            "May", "Jun", "Jul", "Aug",
+            "Sep", "Oct", "Nov", "Dec",
+        };
+        assert(months.len == 12);
+        const month_string = months[month_number - 1];
+
+        return try mem.concat(arena, u8, &.{
+            month_string,
+            " ",
+            day,
+            ", ",
+            year,
+        });
+    }
+};
+
+pub const Page = struct {
+    title: []const u8,
+    description: []const u8,
+
+    pub fn parse(io: Io, arena: Allocator, path_file: []const u8) !Page {
+        const text = try Io.Dir.readFileAlloc(.cwd(), io, path_file, arena, .unlimited);
+        var line_iterator = mem.splitScalar(u8, text, '\n');
+        const title_line = line_iterator.next() orelse return error.TitleInvalid;
+
+        var title = cut_prefix(title_line, "# ") orelse return error.TitleInvalid;
+        title = mem.trim(u8, title, "`");
+        if (title.len < 3) return error.TitleInvalid;
+
+        const new_line = line_iterator.next() orelse return error.NewlineMissingAfterTitle;
+        assert(new_line.len == 0);
+
+        var sentences: std.ArrayList([]const u8) = .empty;
+        while (line_iterator.next()) |line| {
+            if (line.len == 0) break;
+            try sentences.append(arena, line);
+        }
+
+        return .{
+            .title = try arena.dupe(u8, title),
+            .description = try mem.join(arena, " ", sentences.items),
+        };
+    }
+};
+
+pub fn cut_prefix(text: []const u8, comptime prefix: []const u8) ?[]const u8 {
+    return if (mem.startsWith(u8, text, prefix)) text[prefix.len..] else null;
+}
 
 fn oom() noreturn {
     fatal("oom\n", .{});
