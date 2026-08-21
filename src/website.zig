@@ -12,9 +12,6 @@ const path_base = "content/";
 const path_posts = "posts/";
 const say_my_name = "nathanielketema";
 
-const template_posts = @embedFile("html/posts.html");
-const template_list = @embedFile("html/li.html");
-
 pub const Website = struct {
     b: *Build,
     pandoc: Build.LazyPath,
@@ -67,29 +64,37 @@ pub const Website = struct {
         const b = website.b;
         const arena = b.allocator;
 
-        var html_list = Html.create(arena) catch oom();
+        var html = Html.create(arena) catch oom();
+        html.write("<ul>\n", .{}) catch |err| fatal_template(err);
         const posts = website.collect_posts();
         for (posts) |post| {
-            html_list.write(template_list, .{
+            html.write(
+                \\<li>
+                \\  <time datetime="{[time_machine]s}">{[time_human]s}</time>
+                \\  <h2>
+                \\     <a href="{[url]s}">{[title]s}</a>
+                \\  </h2>
+                \\</li>
+                \\
+            , .{
                 .url = post.url,
                 .title = post.title,
+                .time_machine = post.time_machine,
+                .time_human = post.time_human,
             }) catch |err| fatal_template(err);
 
             const page_post_out = website.write_page(.{
                 .page_title = post.title,
                 .page_url = b.pathJoin(&.{ path_posts, post.url }),
                 .page_content = post.content,
+                .page_description = post.description,
             });
             _ = website.content.addCopyFile(page_post_out, post.path_out);
         }
-
-        var html_posts = Html.create(arena) catch oom();
-        html_posts.write(template_posts, .{
-            .list = html_list.string(),
-        }) catch |err| fatal_template(err);
+        html.write("</ul>\n", .{}) catch |err| fatal_template(err);
 
         const file_posts_index = b.addWriteFiles();
-        const content_index = file_posts_index.add("posts_index.html", html_posts.string());
+        const content_index = file_posts_index.add("posts_index.html", html.string());
 
         const page_posts_index_out = website.write_page(.{
             .page_title = say_my_name,
