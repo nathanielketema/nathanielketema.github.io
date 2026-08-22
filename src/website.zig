@@ -331,7 +331,7 @@ pub const Page = struct {
         var line_iterator = mem.splitScalar(u8, text, '\n');
         const title_line = line_iterator.next() orelse return error.TitleInvalid;
 
-        var title = cut_prefix(title_line, "# ") orelse return error.TitleInvalid;
+        var title = mem.cutPrefix(u8, title_line, "# ") orelse return error.TitleInvalid;
         title = mem.trim(u8, title, "`");
         if (title.len < 3) return error.TitleInvalid;
 
@@ -350,10 +350,6 @@ pub const Page = struct {
         };
     }
 };
-
-pub fn cut_prefix(text: []const u8, comptime prefix: []const u8) ?[]const u8 {
-    return if (mem.startsWith(u8, text, prefix)) text[prefix.len..] else null;
-}
 
 fn oom() noreturn {
     fatal("oom\n", .{});
