@@ -7,7 +7,7 @@ pub fn build(b: *std.Build) void {
     const pandoc = get_pandoc_bin(b) orelse return;
     const website = Website.init(b, pandoc);
     website.build();
-    std.log.info("Website built successfully!", .{});
+    defer std.log.info("Website built successfully!", .{});
 
     b.build_root.handle.deleteTree(io, "zig-out") catch |err| {
         std.debug.print("unable to delete `zig-out`: {t}\n", .{err});
