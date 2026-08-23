@@ -343,10 +343,47 @@ pub const Page = struct {
             if (line.len == 0) break;
             try sentences.append(arena, line);
         }
+        const paragraph = try mem.join(arena, " ", sentences.items);
+        var description: std.ArrayList(u8) = try .initCapacity(arena, paragraph.len);
+
+        // This changes the following in description:
+        // - "Foo" -> Foo
+        // - `Foo` -> Foo
+        // - [Foo](https://foo.com) -> Foo
+        var i: usize = 0;
+        while (i < paragraph.len) : (i += 1) {
+            switch (paragraph[i]) {
+                '(' => {
+                    while (i < paragraph.len and paragraph[i] != ')') i += 1;
+                },
+                '[' => {
+                    i += 1;
+                    while (i < paragraph.len and paragraph[i] != ']') {
+                        try description.append(arena, paragraph[i]);
+                        i += 1;
+                    }
+                },
+                '"' => {
+                    i += 1;
+                    while (i < paragraph.len and paragraph[i] != '"') {
+                        try description.append(arena, paragraph[i]);
+                        i += 1;
+                    }
+                },
+                '`' => {
+                    i += 1;
+                    while (i < paragraph.len and paragraph[i] != '`') {
+                        try description.append(arena, paragraph[i]);
+                        i += 1;
+                    }
+                },
+                else => try description.append(arena, paragraph[i]),
+            }
+        }
 
         return .{
             .title = try arena.dupe(u8, title),
-            .description = try mem.join(arena, " ", sentences.items),
+            .description = description.items,
         };
     }
 };
