@@ -208,10 +208,12 @@ pub const Website = struct {
 
         if (options.page_post) {
             pandoc_step.addPrefixedFileArg("--lua-filter=", b.path("pandoc/link_self.lua"));
+            pandoc_step.addPrefixedFileArg("--lua-filter=", b.path("pandoc/wrap_headings.lua"));
+            pandoc_step.addPrefixedFileArg("--lua-filter=", b.path("pandoc/wrap_blocks.lua"));
         }
 
         pandoc_step.addArgs(&.{
-            "--from", "gfm+smart-tex_math_dollars",
+            "--from", "markdown",
             "--to",   "html5",
         });
         pandoc_step.addFileArg(source);
