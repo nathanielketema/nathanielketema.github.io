@@ -46,7 +46,7 @@ pub const Website = struct {
         const files_static: []const []const u8 = &.{ "index.md", "resume.md" };
         for (files_static) |file_static| {
             const source = b.path(path_base).path(b, file_static);
-            const content = website.run_pandoc(source);
+            const content = website.run_pandoc(source, .{});
             const file_html = mem.concat(arena, u8, &.{
                 Io.Dir.path.stem(file_static),
                 ".html",
@@ -197,16 +197,26 @@ pub const Website = struct {
         return page_writer_run.addOutputFileArg("page.html");
     }
 
-    fn run_pandoc(website: Website, file_md: Build.LazyPath) Build.LazyPath {
+    fn run_pandoc(
+        website: Website,
+        source: Build.LazyPath,
+        options: struct { page_post: bool = false },
+    ) Build.LazyPath {
         const b = website.b;
         const pandoc_step = std.Build.Step.Run.create(b, "run pandoc");
         pandoc_step.addFileArg(website.pandoc);
+
+        if (options.page_post) {
+            pandoc_step.addPrefixedFileArg("--lua-filter=", b.path("pandoc/link_self.lua"));
+        }
+
         pandoc_step.addArgs(&.{
             "--from", "gfm+smart-tex_math_dollars",
             "--to",   "html5",
         });
-        pandoc_step.addFileArg(file_md);
-        return pandoc_step.captureStdOut(.{});
+        pandoc_step.addFileArg(source);
+
+        return pandoc_step.addPrefixedOutputFileArg("--output=", "pandoc_out.html");
     }
 };
 
@@ -275,7 +285,7 @@ pub const Post = struct {
         });
 
         const source = b.path(path_base).path(b, path_posts).path(b, file_md);
-        const content = website.run_pandoc(source);
+        const content = website.run_pandoc(source, .{ .page_post = true });
 
         const time_machine = try mem.join(arena, "-", &.{ year, month, day });
         const time_human = parse_machine_time(arena, time_machine) catch |err| {
