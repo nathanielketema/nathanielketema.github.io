@@ -351,7 +351,14 @@ pub const Page = struct {
         var sentences: std.ArrayList([]const u8) = .empty;
         while (line_iterator.next()) |line| {
             if (line.len == 0) break;
-            try sentences.append(arena, line);
+            // Skip codeblocks from description
+            if (mem.startsWith(u8, line, "```")) {
+                var line_next = line_iterator.next().?;
+                while (!mem.startsWith(u8, line_next, "```")) {
+                    line_next = line_iterator.next().?;
+                }
+                _ = line_iterator.next();
+            } else try sentences.append(arena, line);
         }
         const paragraph = try mem.join(arena, " ", sentences.items);
         var description: std.ArrayList(u8) = try .initCapacity(arena, paragraph.len);
