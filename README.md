@@ -1,4 +1,6 @@
-Check out my site at <https://nathanielketema.github.io/>
+# Personal site
+
+To build, run:
 
 ```console
 zig build
