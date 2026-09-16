@@ -1,3 +1,3 @@
 # Site under heavy construction
 
-Come back later...
+Come back later :)
