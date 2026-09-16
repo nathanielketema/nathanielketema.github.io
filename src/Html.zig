@@ -3,6 +3,7 @@ const assert = std.debug.assert;
 const testing = std.testing;
 const Io = std.Io;
 const Allocator = std.mem.Allocator;
+const snap = @import("Snapshot.zig").snap;
 
 const Html = @This();
 
@@ -65,6 +66,23 @@ test {
         \\</ul>
         ,
     });
-    assert(html.string().len > template.len);
-    // std.debug.print("{s}", .{html.string()});
+
+    try snap(@src(),
+        \\<!DOCTYPE html>
+        \\<html lang="en-US">
+        \\    <head>
+        \\        <title>title: test 123</title>
+        \\        <meta name="description" content="this is a description">
+        \\    </head>
+        \\    <body>
+        \\        <main>
+        \\            <ul>
+        \\  <li>1</li>
+        \\  <li>2</li>
+        \\  <li>3</li>
+        \\</ul>
+        \\        </main>
+        \\    </body>
+        \\</html>
+    ).diff(html.string());
 }
