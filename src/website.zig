@@ -46,7 +46,7 @@ pub const Website = struct {
         const b = website.b;
         const arena = b.allocator;
 
-        const files_static: []const []const u8 = &.{ "index.md", "resume.md" };
+        const files_static: []const []const u8 = &.{ "index.md" };
         for (files_static) |file_static| {
             const source = b.path(path_base).path(b, file_static);
             const content = website.run_pandoc(source, .{});
@@ -132,7 +132,7 @@ pub const Website = struct {
                 if (mem.startsWith(u8, entry.path, "css/")) continue;
                 if (mem.eql(u8, entry.basename, ".DS_Store")) continue;
                 if (mem.eql(u8, entry.basename, "index.md")) continue;
-                if (mem.eql(u8, entry.basename, "resume.md")) continue;
+                if (mem.eql(u8, entry.basename, "resume.pdf")) continue;
 
                 const post = Post.parse(
                     website,
@@ -174,7 +174,6 @@ pub const Website = struct {
                 if (mem.eql(u8, entry.basename, ".DS_Store")) continue;
                 if (mem.startsWith(u8, entry.path, "posts/")) continue;
                 if (mem.eql(u8, entry.basename, "index.md")) continue;
-                if (mem.eql(u8, entry.basename, "resume.md")) continue;
                 const source = b.path(path_base).path(b, entry.path);
                 _ = website.content.addCopyFile(source, entry.path);
             }
