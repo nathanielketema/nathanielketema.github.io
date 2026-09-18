@@ -34,6 +34,9 @@ pub const Website = struct {
     }
 
     pub fn build(website: Website) void {
+        std.log.info("Building website...", .{});
+        defer std.log.info("Website built successfully!", .{});
+
         website.add_static_pages();
         website.add_posts();
         website.add_assets_and_css();
