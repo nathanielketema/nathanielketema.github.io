@@ -57,6 +57,7 @@ pub const Website = struct {
                 .page_title = say_my_name,
                 .page_url = file_html, // {site_url}/{page_url}
                 .page_content = content,
+                .file_md = file_static,
             });
             _ = website.content.addCopyFile(page_static_out, file_html);
         }
@@ -90,6 +91,7 @@ pub const Website = struct {
                 .page_url = b.pathJoin(&.{ path_posts, post.url }),
                 .page_content = post.content,
                 .page_description = post.description,
+                .file_md = post.file_md,
             });
             _ = website.content.addCopyFile(page_post_out, post.path_out);
         }
@@ -102,6 +104,7 @@ pub const Website = struct {
             .page_title = say_my_name,
             .page_url = path_posts,
             .page_content = content_index,
+            .file_md = "posts/",
         });
         _ = website.content.addCopyFile(page_posts_index_out, b.pathJoin(&.{
             path_posts,
@@ -185,6 +188,7 @@ pub const Website = struct {
             page_url: []const u8,
             page_content: Build.LazyPath,
             page_description: []const u8 = "Nathaniel Ketema's personal website",
+            file_md: []const u8,
         },
     ) Build.LazyPath {
         const b = website.page_writer_exe.step.owner;
@@ -194,6 +198,7 @@ pub const Website = struct {
             options.page_title,
             options.page_url,
             options.page_description,
+            options.file_md,
         });
         page_writer_run.addFileArg(options.page_content);
         return page_writer_run.addOutputFileArg("page.html");
@@ -251,6 +256,7 @@ pub const Post = struct {
     date: Date,
     time_machine: []const u8,
     time_human: []const u8,
+    file_md: []const u8,
 
     pub fn parse(website: Website, file_md: []const u8, path_page: []const u8) !Post {
         const b = website.b;
@@ -306,6 +312,7 @@ pub const Post = struct {
             .date = date,
             .time_machine = time_machine,
             .time_human = time_human,
+            .file_md = try arena.dupe(u8, file_md),
         };
     }
 

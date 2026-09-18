@@ -14,13 +14,14 @@ pub fn main(init: std.process.Init) void {
     const args = init.minimal.args.toSlice(arena) catch |err| {
         fatal("unable to read cmdline args: {t}\n", .{err});
     };
-    assert(args.len == 6);
+    assert(args.len == 7);
 
     const title = args[1];
     const page_url = args[2];
     const description = args[3];
-    const path_file_source = args[4];
-    const path_file_target = args[5];
+    const file_md = args[4];
+    const path_file_source = args[5];
+    const path_file_target = args[6];
     const content = Io.Dir.readFileAlloc(
         .cwd(),
         io,
@@ -36,6 +37,7 @@ pub fn main(init: std.process.Init) void {
         .page_url = page_url,
         .site_url = site_url,
         .description = description,
+        .file_md = file_md,
     }) catch |err| fatal("unable to write to html template: {t}\n", .{err});
 
     Io.Dir.writeFile(.cwd(), io, .{
