@@ -50,9 +50,8 @@ pub const Website = struct {
         for (files_static) |file_static| {
             const source = b.path(path_base).path(b, file_static);
             const content = website.run_pandoc(source, .{});
-            const file_html = mem.concat(arena, u8, &.{
+            const file_html = std.fmt.allocPrint(arena, "{s}.html", .{
                 Io.Dir.path.stem(file_static),
-                ".html",
             }) catch oom();
             const page_static_out = website.write_page(.{
                 .page_title = say_my_name,
@@ -271,7 +270,7 @@ pub const Post = struct {
         const file_html = blk: {
             const file_tmp = try mem.replaceOwned(u8, arena, it.rest(), "_", "-");
             const stem = Io.Dir.path.stem(file_tmp);
-            break :blk try mem.concat(arena, u8, &.{ stem, ".html" });
+            break :blk try std.fmt.allocPrint(arena, "{s}.html", .{stem});
         };
 
         const path_out = try mem.join(arena, "/", &.{
@@ -325,15 +324,9 @@ pub const Post = struct {
             "Sep", "Oct", "Nov", "Dec",
         };
         assert(months.len == 12);
-        const month_string = months[month_number - 1];
+        const month = months[month_number - 1];
 
-        return try mem.concat(arena, u8, &.{
-            month_string,
-            " ",
-            day,
-            ", ",
-            year,
-        });
+        return try std.fmt.allocPrint(arena, "{s} {s}, {s}", .{month, day, year});
     }
 };
 
