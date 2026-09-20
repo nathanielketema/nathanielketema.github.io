@@ -129,6 +129,7 @@ pub const Website = struct {
         while (walker.next(io) catch |err| fatal_walk(err)) |entry| {
             if (entry.kind == .file) {
                 if (mem.startsWith(u8, entry.path, "assets/")) continue;
+                if (mem.startsWith(u8, entry.path, "drafts/")) continue;
                 if (mem.startsWith(u8, entry.path, "css/")) continue;
                 if (mem.eql(u8, entry.basename, ".DS_Store")) continue;
                 if (mem.eql(u8, entry.basename, "index.md")) continue;
@@ -173,6 +174,7 @@ pub const Website = struct {
             if (entry.kind == .file) {
                 if (mem.eql(u8, entry.basename, ".DS_Store")) continue;
                 if (mem.startsWith(u8, entry.path, "posts/")) continue;
+                if (mem.startsWith(u8, entry.path, "drafts/")) continue;
                 if (mem.eql(u8, entry.basename, "index.md")) continue;
                 const source = b.path(path_base).path(b, entry.path);
                 _ = website.content.addCopyFile(source, entry.path);
