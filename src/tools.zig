@@ -27,12 +27,14 @@ pub fn main(init: std.process.Init) !void {
     const arg = args.next() orelse fatal("{s}\n", .{usage});
 
     switch (tool) {
-        .touch => try touch(init.io, arg),
+        .touch => touch(init.io, arg),
     }
 }
 
 // Has a system dependency on unix command line utility `date`.
-pub fn touch(io: Io, arg: []const u8) !void {
+pub fn touch(io: Io, arg: []const u8) void {
+    errdefer |err| fatal("unable to touch '{s}': {t}\n", .{arg, err});
+
     var buffer: [2 * Io.Dir.max_path_bytes]u8 = undefined; // ~8KiB
     var fba: std.heap.FixedBufferAllocator = .init(&buffer);
     const arena = fba.allocator();
