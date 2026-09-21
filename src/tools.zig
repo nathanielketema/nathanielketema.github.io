@@ -6,11 +6,14 @@ const fmt = std.fmt;
 const Io = std.Io;
 const Allocator = std.mem.Allocator;
 
-const Tools = enum { touch, publish };
+const Template = @import("Template.zig");
+
+const Tools = enum { touch, publish, dev };
 
 const tools: std.StaticStringMap(Tools) = .initComptime(.{
     .{ "touch", .touch },
     .{ "publish", .publish },
+    .{ "dev", .dev },
 });
 
 const KiB = 1024;
@@ -24,6 +27,7 @@ const usage =
     \\Tools:
     \\  touch       Creates new draft
     \\  publish     Stamps todays date and moves draft to posts.
+    \\  dev         Serves zig-out/www/ locally.
 ;
 
 pub fn main(init: std.process.Init) !void {
@@ -37,11 +41,17 @@ pub fn main(init: std.process.Init) !void {
 
     const pick = args.next() orelse fatal("{s}\n", .{usage});
     const tool = if (tools.get(pick)) |tl| tl else fatal("{s}\n", .{usage});
-    const arg = args.next() orelse fatal("{s}\n", .{usage});
 
     switch (tool) {
-        .touch => touch(init.io, arena.allocator(), .{ .arg = arg }),
-        .publish => publish(init.io, arena.allocator(), arg),
+        .touch => {
+            const arg = args.next() orelse fatal("{s}\n", .{usage});
+            touch(init.io, arena.allocator(), .{ .arg = arg });
+        },
+        .publish => {
+            const arg = args.next() orelse fatal("{s}\n", .{usage});
+            publish(init.io, arena.allocator(), arg);
+        },
+        .dev => dev(init.io),
     }
 }
 
@@ -79,6 +89,17 @@ pub fn touch(io: Io, arena: Allocator, options: struct {
 
     std.log.info("touching {s}", .{file_name});
     try Io.Dir.writeFile(.cwd(), io, .{ .data = data, .sub_path = sub_path });
+}
+
+/// Change later, but for now it does the job.
+pub fn dev(io: Io) void {
+    errdefer |err| fatal("unable to serve site: {t}\n", .{err});
+
+    var child = try std.process.spawn(io, .{
+        .argv = &.{ "dx", "http-server", "zig-out/www", "-o" },
+    });
+    const term = try child.wait(io);
+    if (term.exited != 0) return error.UnableToSpawnProcess;
 }
 
 /// Returned format example:
