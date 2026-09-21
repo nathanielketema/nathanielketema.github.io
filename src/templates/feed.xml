@@ -1,0 +1,12 @@
+<feed xmlns="http://www.w3.org/2005/Atom">
+<link href="{[site_url]s}feed.xml" rel="self" type="application/atom+xml"/>
+<link href="{[site_url]s}" rel="alternate" type="text/html"/>
+<updated>{[date]s}</updated>
+<id>{[site_url]s}feed.xml</id>
+<title type="html">nathanielketema</title>
+<subtitle>nathanielketema's Personal Website</subtitle>
+<author>
+<name>Nathaniel Ketema</name>
+</author>
+{[entries]s}
+</feed>

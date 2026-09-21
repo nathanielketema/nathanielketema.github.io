@@ -1,0 +1,20 @@
+<entry>
+<title type="text">{[title]s}</title>
+<link href="{[site_url]s}{[page_url]s}" rel="alternate" type="text/html" title="{[title]s}"/>
+<published>{[date]s}T00:00:00+00:00</published>
+<updated>{[date]s}T00:00:00+00:00</updated>
+<id>{[site_url]s}{[page_url_stem]s}</id>
+<author>
+<name>Nathaniel Ketema</name>
+</author>
+<summary type="html">
+<![CDATA[
+{[description]s}
+]]>
+</summary>
+<content type="html" xml:base="{[site_url]s}{[page_url]s}">
+<![CDATA[
+{[content]s}
+]]>
+</content>
+</entry>

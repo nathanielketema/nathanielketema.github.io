@@ -17,6 +17,7 @@ pub const Website = struct {
     pandoc: Build.LazyPath,
     content: *Build.Step.WriteFile,
     page_writer_exe: *Build.Step.Compile,
+    rss_writer_exe: *Build.Step.Compile,
 
     pub fn init(b: *Build, pandoc: Build.LazyPath) Website {
         return .{
@@ -30,6 +31,13 @@ pub const Website = struct {
                     .target = b.graph.host,
                 }),
             }),
+            .rss_writer_exe = b.addExecutable(.{
+                .name = "rss_writer",
+                .root_module = b.createModule(.{
+                    .root_source_file = b.path("src/rss_writer.zig"),
+                    .target = b.graph.host,
+                }),
+            }),
         };
     }
 
@@ -40,13 +48,14 @@ pub const Website = struct {
         website.add_static_pages();
         website.add_posts();
         website.add_assets_and_css();
+        website.add_rss_feed();
     }
 
     pub fn add_static_pages(website: Website) void {
         const b = website.b;
         const arena = b.allocator;
 
-        const files_static: []const []const u8 = &.{ "index.md" };
+        const files_static: []const []const u8 = &.{"index.md"};
         for (files_static) |file_static| {
             const source = b.path(path_base).path(b, file_static);
             const content = website.run_pandoc(source, .{});
@@ -63,15 +72,34 @@ pub const Website = struct {
         }
     }
 
+    pub fn add_rss_feed(website: Website) void {
+        const b = website.page_writer_exe.step.owner;
+        const arena = b.allocator;
+        const rss_writer_run = b.addRunArtifact(website.rss_writer_exe);
+        const rss_out = rss_writer_run.addOutputFileArg("feed.xml");
+
+        const posts = website.collect_posts();
+        for (posts) |post| {
+            rss_writer_run.addArgs(&.{
+                post.title,
+                post.time_machine,
+                std.fmt.allocPrint(arena, "posts/{s}", .{post.url}) catch oom(),
+                post.description,
+            });
+            rss_writer_run.addFileArg(post.content);
+        }
+        _ = website.content.addCopyFile(rss_out, "feed.xml");
+    }
+
     pub fn add_posts(website: Website) void {
         const b = website.b;
         const arena = b.allocator;
 
-        var html = Html.create(arena) catch oom();
-        html.write("<ul>\n", .{}) catch |err| fatal_template(err);
+        var template = Template.create(arena) catch oom();
+        template.write("<ul>\n", .{}) catch |err| fatal_template(err);
         const posts = website.collect_posts();
         for (posts) |post| {
-            html.write(
+            template.write(
                 \\<li>
                 \\  <time datetime="{[time_machine]s}">{[time_human]s}</time>
                 \\  <h2>
@@ -334,7 +362,7 @@ pub const Post = struct {
         assert(months.len == 12);
         const month = months[month_number - 1];
 
-        return try std.fmt.allocPrint(arena, "{s} {s}, {s}", .{month, day, year});
+        return try std.fmt.allocPrint(arena, "{s} {s}, {s}", .{ month, day, year });
     }
 };
 
