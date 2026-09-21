@@ -1,15 +1,16 @@
 const std = @import("std");
 const assert = std.debug.assert;
 const testing = std.testing;
-const Html = @import("Html.zig");
+const Template = @import("Template.zig");
 const Io = std.Io;
 
 const site_url = "https://nathanielketema.github.io/";
-const template_base = @embedFile("html/base.html");
+const template_base = @embedFile("templates/base.html");
 
 pub fn main(init: std.process.Init) void {
     const io = init.io;
     const arena = init.arena.allocator();
+    const cwd = Io.Dir.cwd();
 
     const args = init.minimal.args.toSlice(arena) catch |err| {
         fatal("unable to read cmdline args: {t}\n", .{err});
@@ -22,16 +23,11 @@ pub fn main(init: std.process.Init) void {
     const file_md = args[4];
     const path_file_source = args[5];
     const path_file_target = args[6];
-    const content = Io.Dir.readFileAlloc(
-        .cwd(),
-        io,
-        path_file_source,
-        arena,
-        .unlimited,
-    ) catch |err| fatal("unable to read file: {t}\n", .{err});
+    const content = cwd.readFileAlloc(io, path_file_source, arena, .unlimited) catch |err|
+        fatal("unable to read file: {t}\n", .{err});
 
-    var html = Html.create(arena) catch oom();
-    html.write(template_base, .{
+    var template = Template.create(arena) catch oom();
+    template.write(template_base, .{
         .title = title,
         .content = content,
         .page_url = page_url,
@@ -42,7 +38,7 @@ pub fn main(init: std.process.Init) void {
 
     Io.Dir.writeFile(.cwd(), io, .{
         .sub_path = path_file_target,
-        .data = html.string(),
+        .data = template.string(),
     }) catch |err| fatal("unable to write file: {t}\n", .{err});
 }
 

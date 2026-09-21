@@ -5,33 +5,33 @@ const Io = std.Io;
 const Allocator = std.mem.Allocator;
 const snap = @import("Snapshot.zig").snap;
 
-const Html = @This();
+const Template = @This();
 
 arena: Allocator,
 handle: Io.Writer.Allocating,
 writer: *Io.Writer,
 
-pub fn create(arena: Allocator) Allocator.Error!*Html {
-    var html = try arena.create(Html);
-    html.* = .{
+pub fn create(arena: Allocator) Allocator.Error!*Template {
+    var template = try arena.create(Template);
+    template.* = .{
         .arena = arena,
         .handle = .init(arena),
         .writer = undefined,
     };
-    html.writer = &html.handle.writer;
-    return html;
+    template.writer = &template.handle.writer;
+    return template;
 }
 
-pub fn write(html: *Html, comptime template: []const u8, replacement: anytype) !void {
+pub fn write(template: *Template, comptime template_text: []const u8, replacement: anytype) !void {
     const ReplacementType = @TypeOf(replacement);
     const replacement_type_info = @typeInfo(ReplacementType);
     if (replacement_type_info != .@"struct") @compileError("expected struct");
 
-    try html.writer.print(template, replacement);
+    try template.writer.print(template_text, replacement);
 }
 
-pub fn string(html: *Html) []const u8 {
-    return html.handle.written();
+pub fn string(template: *Template) []const u8 {
+    return template.handle.written();
 }
 
 test {
@@ -39,8 +39,8 @@ test {
     defer arena_instance.deinit();
     const arena = arena_instance.allocator();
 
-    const html = try Html.create(arena);
-    const template = comptime
+    const template = try Template.create(arena);
+    const template_text = comptime
         \\<!DOCTYPE html>
         \\<html lang="en-US">
         \\    <head>
@@ -55,7 +55,7 @@ test {
         \\</html>
     ;
 
-    try html.write(template, .{
+    try template.write(template_text, .{
         .title = "title: test 123",
         .description = "this is a description",
         .children =
@@ -84,5 +84,5 @@ test {
         \\        </main>
         \\    </body>
         \\</html>
-    ).diff(html.string());
+    ).diff(template.string());
 }

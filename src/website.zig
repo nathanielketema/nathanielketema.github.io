@@ -6,7 +6,7 @@ const Io = std.Io;
 const Allocator = std.mem.Allocator;
 const Build = std.Build;
 
-const Html = @import("Html.zig");
+const Template = @import("Template.zig");
 
 const path_base = "content/";
 const path_posts = "posts/";
@@ -95,10 +95,10 @@ pub const Website = struct {
             });
             _ = website.content.addCopyFile(page_post_out, post.path_out);
         }
-        html.write("</ul>\n", .{}) catch |err| fatal_template(err);
+        template.write("</ul>\n", .{}) catch |err| fatal_template(err);
 
         const file_posts_index = b.addWriteFiles();
-        const content_index = file_posts_index.add("posts_index.html", html.string());
+        const content_index = file_posts_index.add("posts_index.html", template.string());
 
         const page_posts_index_out = website.write_page(.{
             .page_title = say_my_name,
@@ -424,7 +424,7 @@ fn fatal_walk(err: anyerror) noreturn {
 }
 
 fn fatal_template(err: anyerror) noreturn {
-    fatal("unable to write to html template: {t}\n", .{err});
+    fatal("unable to write to template: {t}\n", .{err});
 }
 
 fn fatal(comptime fmt: []const u8, args: anytype) noreturn {
