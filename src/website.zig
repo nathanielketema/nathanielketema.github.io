@@ -160,6 +160,8 @@ pub const Website = struct {
                 if (mem.startsWith(u8, entry.path, "drafts/")) continue;
                 if (mem.startsWith(u8, entry.path, "css/")) continue;
                 if (mem.eql(u8, entry.basename, ".DS_Store")) continue;
+                if (mem.eql(u8, entry.basename, "favicon.png")) continue;
+                if (mem.eql(u8, entry.basename, "favicon.svg")) continue;
                 if (mem.eql(u8, entry.basename, "index.md")) continue;
                 if (mem.eql(u8, entry.basename, "resume.pdf")) continue;
 
