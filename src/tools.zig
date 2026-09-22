@@ -8,16 +8,21 @@ const Allocator = std.mem.Allocator;
 
 const Template = @import("Template.zig");
 
-const Tools = enum { touch, publish, dev };
+const Tools = enum {
+    touch,
+    publish,
+    dev,
+    spell,
+};
 
 const tools: std.StaticStringMap(Tools) = .initComptime(.{
     .{ "touch", .touch },
     .{ "publish", .publish },
     .{ "dev", .dev },
+    .{ "spell", .spell },
 });
 
 const KiB = 1024;
-const mem_usage_max = 4 * KiB;
 const path_posts = "content/posts/";
 const path_drafts = "content/drafts/";
 
@@ -28,16 +33,15 @@ const usage =
     \\  touch       Creates new draft
     \\  publish     Stamps todays date and moves draft to posts.
     \\  dev         Serves zig-out/www/ locally.
+    \\  spell       Copies a prompt for spell checking
 ;
 
 pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+    const arena = init.arena.allocator();
+
     var args = init.minimal.args.iterate();
     _ = args.skip(); // Skip executable
-
-    var buffer: [mem_usage_max]u8 = undefined;
-    var fba: std.heap.FixedBufferAllocator = .init(&buffer);
-    var arena: std.heap.ArenaAllocator = .init(fba.allocator());
-    defer arena.deinit();
 
     const pick = args.next() orelse fatal("{s}\n", .{usage});
     const tool = if (tools.get(pick)) |tl| tl else fatal("{s}\n", .{usage});
@@ -45,13 +49,17 @@ pub fn main(init: std.process.Init) !void {
     switch (tool) {
         .touch => {
             const arg = args.next() orelse fatal("{s}\n", .{usage});
-            touch(init.io, arena.allocator(), .{ .arg = arg });
+            touch(io, arena, .{ .arg = arg });
         },
         .publish => {
             const arg = args.next() orelse fatal("{s}\n", .{usage});
-            publish(init.io, arena.allocator(), arg);
+            publish(io, arena, arg);
         },
-        .dev => dev(init.io),
+        .spell => {
+            const arg = args.next() orelse fatal("{s}\n", .{usage});
+            spell(io, arena, arg);
+        },
+        .dev => dev(io),
     }
 }
 
@@ -98,6 +106,63 @@ pub fn dev(io: Io) void {
     var child = try std.process.spawn(io, .{
         .argv = &.{ "dx", "http-server", "zig-out/www", "-o" },
     });
+    const term = try child.wait(io);
+    if (term.exited != 0) return error.UnableToSpawnProcess;
+}
+
+/// Spawns `pbcopy` to copy prompt to clipboard
+pub fn spell(io: Io, arena: Allocator, arg: []const u8) void {
+    errdefer |err| fatal("unable to copy: {t}\n", .{err});
+
+    var buffer: [KiB]u8 = undefined;
+    const file = try Io.Dir.openFile(.cwd(), io, arg, .{});
+    var file_reader = file.reader(io, &buffer);
+    const reader = &file_reader.interface;
+
+    const stat = try file.stat(io);
+    const post = try reader.readAlloc(arena, stat.size);
+
+    const content = try std.fmt.allocPrint(arena,
+        \\You are a professional editor. Please identify typos and grammatical errors in the following
+        \\blog post.
+        \\
+        \\IMPORTANT RULES:
+        \\
+        \\1. Find only typos and grammatical errors
+        \\2. Do NOT suggest style changes or voice modifications
+        \\3. Do NOT suggest adding or removing content
+        \\4. For each error found, provide the exact text to replace and what to replace it with
+        \\
+        \\Please respond in this exact format:
+        \\REPLACEMENTS_START
+        \\replace "incorrect text 1" with "correct text 1"
+        \\replace "incorrect text 2" with "correct text 2"
+        \\REPLACEMENTS_END
+        \\
+        \\SUGGESTIONS_START
+        \\- [optional style/clarity suggestion 1]
+        \\- [optional style/clarity suggestion 2]
+        \\- [optional style/clarity suggestion 3]
+        \\SUGGESTIONS_END
+        \\
+        \\You can have as many suggestions as you want!
+        \\
+        \\Here is the blog post to check:
+        \\{s}
+        \\
+    , .{post});
+
+    var child = try std.process.spawn(io, .{
+        .argv = &.{"pbcopy"},
+        .stdin = .pipe,
+    });
+
+    if (child.stdin) |*stdin| {
+        try stdin.writeStreamingAll(io, content);
+        child.stdin.?.close(io);
+        child.stdin = null;
+    }
+
     const term = try child.wait(io);
     if (term.exited != 0) return error.UnableToSpawnProcess;
 }
