@@ -52,8 +52,6 @@ pub fn main(init: std.process.Init) void {
 }
 
 fn utc(io: Io, arena: Allocator) []u8 {
-    errdefer |err| fatal("failed to get UTC timestamp: {t}\n", .{err});
-
     const timestamp = Io.Timestamp.now(io, .real);
     const seconds = timestamp.toSeconds();
     const epoch_seconds = std.time.epoch.EpochSeconds{
@@ -69,8 +67,7 @@ fn utc(io: Io, arena: Allocator) []u8 {
         @rem(timestamp.toNanoseconds(), std.time.ns_per_s),
         std.time.ns_per_ms,
     ));
-    const result = try std.fmt.allocPrint(
-        arena,
+    const result = arena.print(
         "{d:0>4}-{d:0>2}-{d:0>2}T{d:0>2}:{d:0>2}:{d:0>2}.{d:0>3}Z",
         .{
             year_day.year,
@@ -81,7 +78,7 @@ fn utc(io: Io, arena: Allocator) []u8 {
             day_seconds.getSecondsIntoMinute(),
             milliseconds,
         },
-    );
+    ) catch |err| fatal("failed to get UTC timestamp: {t}\n", .{err});
 
     return result;
 }

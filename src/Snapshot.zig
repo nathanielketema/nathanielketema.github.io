@@ -4,7 +4,7 @@ const testing = std.testing;
 const Io = std.Io;
 const Allocator = std.mem.Allocator;
 const ArrayList = std.ArrayList;
-const SourceLocation = std.builtin.SourceLocation;
+const SourceLocation = std.lang.SourceLocation;
 const Snapshot = @This();
 
 location: SourceLocation,
@@ -101,7 +101,7 @@ pub fn diff(snapshot: *const Snapshot, got: []const u8) !void {
 }
 
 pub fn diff_fmt(want: *const Snapshot, comptime fmt: []const u8, fmt_args: anytype) !void {
-    const got = try std.fmt.allocPrint(testing.allocator, fmt, fmt_args);
+    const got = try testing.allocator.print(fmt, fmt_args);
     defer testing.allocator.free(got);
     try want.diff(got);
 }

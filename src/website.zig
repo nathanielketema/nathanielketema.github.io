@@ -59,7 +59,7 @@ pub const Website = struct {
         for (files_static) |file_static| {
             const source = b.path(path_base).path(b, file_static);
             const content = website.run_pandoc(source, .{});
-            const file_html = std.fmt.allocPrint(arena, "{s}.html", .{
+            const file_html = arena.print("{s}.html", .{
                 Io.Dir.path.stem(file_static),
             }) catch oom();
             const page_static_out = website.write_page(.{
@@ -83,7 +83,7 @@ pub const Website = struct {
             rss_writer_run.addArgs(&.{
                 post.title,
                 post.time_machine,
-                std.fmt.allocPrint(arena, "posts/{s}", .{post.url}) catch oom(),
+                arena.print("posts/{s}", .{post.url}) catch oom(),
                 post.description,
             });
             rss_writer_run.addFileArg(post.content);
@@ -145,7 +145,7 @@ pub const Website = struct {
         const io = b.graph.io;
         const arena = b.allocator;
 
-        var dir = b.build_root.handle.openDir(io, path_base, .{ .iterate = true }) catch |err| {
+        var dir = b.root.openDir(io, path_base, .{ .iterate = true }) catch |err| {
             fatal_dir(err);
         };
         defer dir.close(io);
@@ -192,7 +192,7 @@ pub const Website = struct {
         const io = b.graph.io;
         const arena = b.allocator;
 
-        var dir = b.build_root.handle.openDir(io, path_base, .{ .iterate = true }) catch |err| {
+        var dir = b.root.openDir(io, path_base, .{ .iterate = true }) catch |err| {
             fatal_dir(err);
         };
         defer dir.close(io);
@@ -307,7 +307,7 @@ pub const Post = struct {
         const file_html = blk: {
             const file_tmp = try mem.replaceOwned(u8, arena, it.rest(), "_", "-");
             const stem = Io.Dir.path.stem(file_tmp);
-            break :blk try std.fmt.allocPrint(arena, "{s}.html", .{stem});
+            break :blk try arena.print("{s}.html", .{stem});
         };
 
         const path_out = try mem.join(arena, "/", &.{
@@ -364,7 +364,7 @@ pub const Post = struct {
         assert(months.len == 12);
         const month = months[month_number - 1];
 
-        return try std.fmt.allocPrint(arena, "{s} {s}, {s}", .{ month, day, year });
+        return try arena.print("{s} {s}, {s}", .{ month, day, year });
     }
 };
 

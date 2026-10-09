@@ -27,7 +27,7 @@ pub fn build(b: *std.Build) void {
     const tools_step = b.step("tools", "Tools to make life easier.");
 
     const tools_cmd = b.addRunArtifact(tools_exe);
-    if (b.args) |args| tools_cmd.addArgs(args);
+    tools_cmd.addPassthruArgs();
     tools_step.dependOn(&tools_cmd.step);
     tools_cmd.step.dependOn(b.getInstallStep());
 }

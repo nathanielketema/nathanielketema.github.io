@@ -49,24 +49,28 @@ pub fn main(init: std.process.Init) !void {
     switch (tool) {
         .touch => {
             const arg = args.next() orelse fatal("{s}\n", .{usage});
-            touch(io, arena, .{ .arg = arg });
+            touch(io, arena, .{ .arg = arg }) catch |err| {
+                fatal("unable to touch '{s}': {t}\n", .{ arg, err });
+            };
         },
         .publish => {
             const arg = args.next() orelse fatal("{s}\n", .{usage});
-            publish(io, arena, arg);
+            publish(io, arena, arg) catch |err| {
+                fatal("unable to publish '{s}': {t}\n", .{ arg, err });
+            };
         },
         .spell => {
             const arg = args.next() orelse fatal("{s}\n", .{usage});
-            spell(io, arena, arg);
+            spell(io, arena, arg) catch |err| {
+                fatal("unable to copy: {t}\n", .{err});
+            };
         },
-        .dev => dev(io),
+        .dev => dev(io) catch |err| fatal("unable to serve site: {t}\n", .{err}),
     }
 }
 
 /// Moves file from draft -> posts
-pub fn publish(io: Io, arena: Allocator, arg: []const u8) void {
-    errdefer |err| fatal("unable to publish '{s}': {t}\n", .{ arg, err });
-
+pub fn publish(io: Io, arena: Allocator, arg: []const u8) !void {
     // content/draft/arg -> content/posts/file_name
     const file_name_stamped = try stamp_date_to_file_name(io, arena, arg);
     const source = try Io.Dir.path.join(arena, &.{ path_drafts, arg });
@@ -81,11 +85,9 @@ pub fn touch(io: Io, arena: Allocator, options: struct {
     arg: []const u8,
     target: []const u8 = path_drafts,
     date: bool = false,
-}) void {
-    errdefer |err| fatal("unable to touch '{s}': {t}\n", .{ options.arg, err });
-
+}) !void {
     // Write an H1 header with the file name
-    const data = try fmt.allocPrint(arena, "# {s}\n", .{options.arg});
+    const data = try arena.print("# {s}\n", .{options.arg});
 
     const file_name = blk: {
         var file = try parse_file_name(arena, options.arg);
@@ -100,9 +102,7 @@ pub fn touch(io: Io, arena: Allocator, options: struct {
 }
 
 /// Change later, but for now it does the job.
-pub fn dev(io: Io) void {
-    errdefer |err| fatal("unable to serve site: {t}\n", .{err});
-
+pub fn dev(io: Io) !void {
     var child = try std.process.spawn(io, .{
         .argv = &.{ "dx", "http-server", "zig-out/www", "-o" },
     });
@@ -111,9 +111,7 @@ pub fn dev(io: Io) void {
 }
 
 /// Spawns `pbcopy` to copy prompt to clipboard
-pub fn spell(io: Io, arena: Allocator, arg: []const u8) void {
-    errdefer |err| fatal("unable to copy: {t}\n", .{err});
-
+pub fn spell(io: Io, arena: Allocator, arg: []const u8) !void {
     var buffer: [KiB]u8 = undefined;
     const file = try Io.Dir.openFile(.cwd(), io, arg, .{});
     var file_reader = file.reader(io, &buffer);
@@ -122,7 +120,7 @@ pub fn spell(io: Io, arena: Allocator, arg: []const u8) void {
     const stat = try file.stat(io);
     const post = try reader.readAlloc(arena, stat.size);
 
-    const content = try std.fmt.allocPrint(arena,
+    const content = try arena.print(
         \\You are a professional editor. Please identify typos and grammatical errors in the following
         \\blog post.
         \\
@@ -170,7 +168,7 @@ pub fn spell(io: Io, arena: Allocator, arg: []const u8) void {
 /// Returned format example:
 /// - "Foo bar Baz" -> "foo_bar_baz.md"
 fn parse_file_name(arena: Allocator, file_name_raw: []const u8) ![]u8 {
-    var file_name = try fmt.allocPrint(arena, "{s}.md", .{file_name_raw});
+    var file_name = try arena.print("{s}.md", .{file_name_raw});
     file_name = try mem.replaceOwned(u8, arena, file_name, "-", "_");
     file_name = try mem.replaceOwned(u8, arena, file_name, " ", "_");
     file_name = try std.ascii.allocLowerString(arena, file_name);
@@ -184,7 +182,7 @@ fn parse_file_name(arena: Allocator, file_name_raw: []const u8) ![]u8 {
 fn stamp_date_to_file_name(io: Io, arena: Allocator, file_name: []const u8) ![]u8 {
     const date = try get_todays_date(io, arena);
     assert(date.len > 0);
-    return fmt.allocPrint(arena, "{s}_{s}", .{ date, file_name });
+    return arena.print("{s}_{s}", .{ date, file_name });
 }
 
 /// Returned format example: "2026_09_16"
@@ -200,7 +198,7 @@ fn get_todays_date(io: Io, arena: Allocator) ![]u8 {
     const month = day_month.month.numeric();
     const day = day_month.day_index;
 
-    return fmt.allocPrint(arena, "{d:0>4}_{d:0>2}_{d:0>2}", .{ year, month, day });
+    return arena.print("{d:0>4}_{d:0>2}_{d:0>2}", .{ year, month, day });
 }
 
 fn fatal(comptime msg: []const u8, args: anytype) noreturn {
