@@ -274,6 +274,12 @@ hr {
     text-align: center;
 }
 
+.me {
+    float: left;
+    margin-right: 2ch;
+    display: inline;
+}
+
 /* Syntax highlighting */
 .sourceCode .kw { color: darkgreen; }
 .sourceCode .cf { color: darkgreen; }
