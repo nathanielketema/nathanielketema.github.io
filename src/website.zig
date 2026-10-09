@@ -246,9 +246,9 @@ pub const Website = struct {
 
         if (options.page_post) {
             pandoc_step.addPrefixedFileArg("--lua-filter=", b.path("pandoc/link_self.lua"));
-            pandoc_step.addPrefixedFileArg("--lua-filter=", b.path("pandoc/wrap_headings.lua"));
             pandoc_step.addPrefixedFileArg("--lua-filter=", b.path("pandoc/wrap_blocks.lua"));
-        }
+            pandoc_step.addPrefixedFileArg("--lua-filter=", b.path("pandoc/posts.lua"));
+        } else pandoc_step.addPrefixedFileArg("--lua-filter=", b.path("pandoc/statics.lua"));
 
         pandoc_step.addArgs(&.{
             "--from", "markdown",
